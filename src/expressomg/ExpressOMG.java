@@ -3,7 +3,6 @@ package expressomg;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 
-import net.sourceforge.osexpress.apps.pretty.PrettyWalker;
 import net.sourceforge.osexpress.parser.EasyParser;
 import antlr.CommonAST;
 import antlr.RecognitionException;
@@ -12,18 +11,22 @@ import antlr.TokenStreamException;
 /** 
  * EXPRESS Object Model Generator
  * 
- * @author Svetlozar Kostadinov
+ * @author Svetlozar Kostadinov (sevarbg@gmail.com)
  * 
  */
 public class ExpressOMG 
 {
+	private final BufferedInputStream inputStream;
 	private EasyParser parser;
-	private PrettyWalker walker;
 	private ExpressObjectModel objectModel;
 	
 	public ExpressOMG(BufferedInputStream inputStream)
-	{		
-		EasyParser parser;
+	{
+		this.inputStream = inputStream; 		  
+	}
+	
+	public ExpressObjectModel generate()
+	{
 		try
 		{
 			parser = new EasyParser(inputStream);
@@ -43,17 +46,8 @@ public class ExpressOMG
 		{
 			// TODO Auto-generated catch block
 			ex.printStackTrace();
-		}	    
-	}
-	
-	public ExpressObjectModel getResult()
-	{
+		}	 
+		
 		return this.objectModel;
-	}
-	
-	public static ExpressObjectModel create(BufferedInputStream inputStream)
-	{
-		ExpressOMG exOMG = new ExpressOMG(inputStream);
-		return exOMG.getResult();
 	}
 }
