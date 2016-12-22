@@ -1,5 +1,5 @@
 # ExpressOMG (EXPRESS Object Model Generator)
-Library for generating a complete Java class hierarchy from a schema written in the EXPRESS language (.exp file).
+Library for parsing a schema written in the EXPRESS language (.exp file). Produces a DOM-like structure.
 
 Based on ANTLR and http://osexpress.sourceforge.net/exparser.html
 
