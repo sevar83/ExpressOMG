@@ -1,0 +1,44 @@
+
+
+(* ============================ S C H E M A  ====================== *)
+
+
+SCHEMA mr_smiths_garden;
+
+(*
+Mr Smith's garden is a simple one and has been set up to illustrate 
+REFERENCE and USE from the schema mr_jones_garden.
+
+Some of the entities in this schema have the same name as in mr_jones_garden to illustrate name clash handling between schemas.
+*)
+ENTITY garden;
+   has_bed                    : bed;
+END_ENTITY;
+
+ENTITY bed;
+  description : STRING;
+INVERSE
+   the_garden                  : garden FOR has_bed;
+END_ENTITY;
+
+(*
+As plant is USEd by mr_jones_garden schema, it is imported but its subtypes will
+ not be visible in that schema so the only possible combination is plant on 
+its own.
+*)
+ENTITY plant
+   SUPERTYPE OF (flower_plant ANDOR vegetable_plant);
+   name                      : STRING;
+END_ENTITY;
+
+ENTITY flower_plant
+   SUBTYPE OF (plant);
+   flower_colour : STRING;
+END_ENTITY;
+
+ENTITY vegetable_plant
+   SUBTYPE OF (plant);
+   vegetable_type : STRING;
+END_ENTITY;
+
+END_SCHEMA;

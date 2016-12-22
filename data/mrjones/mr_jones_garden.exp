@@ -1,0 +1,320 @@
+(* This is an example model used within the STEPWISE project (Esprit project 25110, see www.stepwise.org) to illustrate different aspects of EXPRESS. It has been modified to have examples of many different EXPRESS constructs. It is not intended to be an example of good modelling style. *)
+
+SCHEMA mr_jones_garden;
+
+REFERENCE FROM support_items;
+
+REFERENCE FROM mr_smiths_garden (garden AS mr_smiths_garden);
+
+USE FROM mr_smiths_garden (plant AS mr_smiths_plant);
+
+CONSTANT
+   water_volume_per_fish: INTEGER := 1;
+   water_volume_per_amphibian: INTEGER := 2;
+   water_volume_per_ornament: INTEGER := 3;
+END_CONSTANT;
+
+(*
+** The description of the domain states that all the flowers in Mr
+** Jones's garden are either coloured red, yellow or white.  For this
+** reason, "flower_colour" has been modelled as an enumerated type.
+*)
+TYPE flower_colour
+   = ENUMERATION OF (red, yellow, white);
+END_TYPE;
+
+TYPE fish_colour
+   = ENUMERATION OF (yellow, black, silver, blue);
+END_TYPE;
+
+TYPE multi_coloured_fish_colour 
+  = SET [2:4] OF fish_colour;
+END_TYPE;
+
+TYPE observed_fish_colour
+  = SELECT (fish_colour, multi_coloured_fish_colour);
+END_TYPE;
+
+TYPE pond_ornament
+   = ENUMERATION OF (waterfall, fountain, bridge);
+END_TYPE;
+
+TYPE fish_type
+   = ENUMERATION OF (koi, goldfish);
+END_TYPE;
+
+TYPE aquatic_plant_types
+   = ENUMERATION OF (lilly, weed, lotus);
+END_TYPE;
+
+TYPE amphibian
+   = ENUMERATION OF (frog, newt);
+END_TYPE;
+
+
+ENTITY water_treatment_system
+   ABSTRACT SUPERTYPE OF (pumping_system AND filtration_system);
+   capacity: positive_integer;
+END_ENTITY;
+
+ENTITY filtration_system
+   SUBTYPE OF (water_treatment_system);
+   filtration_efficiency: efficiency;
+   number_of_filters: positive_integer;
+END_ENTITY;
+
+ENTITY pumping_system
+   SUBTYPE OF (water_treatment_system);
+   pumping_efficiency: efficiency;
+   number_of_pumps: positive_integer;
+END_ENTITY;
+
+ENTITY pond
+   ABSTRACT SUPERTYPE OF 
+      (ONEOF (fish_pond, amphibian_pond) ANDOR ornamental_pond);
+   maintained_by: OPTIONAL water_treatment_system; 
+   plants: SET[1:?] OF aquatic_plant;
+   water_volume: positive_integer;
+   water_ph: ph;
+END_ENTITY;
+
+ENTITY livestock_container
+   ABSTRACT SUPERTYPE OF (ONEOF (fish_pond, amphibian_pond));
+   livestock_count : OPTIONAL INTEGER;
+   maintained_by: OPTIONAL STRING;
+END_ENTITY;
+
+ENTITY fish_pond
+   SUBTYPE OF (pond, livestock_container);
+   fish: SET [1:?] OF fish_type;
+   fish_colours : SET OF observed_fish_colour;
+DERIVE
+   SELF\pond.water_volume: positive_integer := water_volume_per_fish *
+   SIZEOF(fish);
+END_ENTITY;
+
+ENTITY amphibian_pond
+   SUBTYPE OF (pond, livestock_container);
+   amphibians: SET [1:?] OF amphibian;
+DERIVE
+   SELF\pond.water_volume: positive_integer :=
+   water_volume_per_amphibian * SIZEOF(amphibians);
+END_ENTITY;
+
+ENTITY ornamental_pond
+   SUBTYPE OF (pond);
+   ornaments: SET [1:?] OF pond_ornament;
+DERIVE
+   SELF\pond.water_volume: positive_integer :=
+   water_volume_per_ornament * SIZEOF(ornaments);
+END_ENTITY;
+
+
+(*
+** The "garden" is the main entity of the model.  All information
+within
+** the description which is not related to the garden and its contents
+** has been ignored e.g. Mr Jones himself and the local horticultural
+** society.
+
+** The set aggregate has been used for the relationship between a
+** "garden" and the "beds" in it.  List and array were rejected as
+** there
+** is no indication within the description of ordering.  Bag was
+** rejected
+** as a "bed" cannot occur in the "garden" more than once.
+*)
+ENTITY garden;
+   has_pond                    : fish_pond;
+   has_greenhouse              : greenhouse;
+   climatic_temperature_range  : temperature_range;
+   has_beds                    : SET [5 : 5] OF bed;
+   neighbours_garden           : mr_smiths_garden;
+END_ENTITY;
+
+(*
+** The "only_one_garden" rule ensures that the model only allows one
+** garden to exist within the domain.
+*)
+RULE only_one_garden FOR (garden);
+WHERE
+   mr_jones_has_one_garden :
+      SIZEOF (garden) = 1;
+END_RULE;
+
+(*
+** A "greenhouse" is a greenhouse within Mr Jones's "garden".  It
+** contains a set of at least one "greenhouse_plants".  The
+"greenhouse"
+** also has an associated "temperature".
+
+** The "greenhouse" is constrained to associated with one and only one
+** "garden".  Since there is "only_one_garden" in the domain, there is
+** no
+** need to explicitly constrain the model to only allow one
+** "greenhouse".
+*)
+ENTITY greenhouse;
+   enforced_temperature_range  : temperature_range;
+   holds_plants                : SET [1 : ?] OF greenhouse_plant;
+INVERSE
+   the_garden                  : garden FOR has_greenhouse;
+END_ENTITY;
+
+(*
+** A "bed" is a flower bed within Mr Jones's "garden".  It contains a
+set
+** of at least one "outdoors_plant".  It also has an associated "ph"
+** value.
+
+** Each "bed" is constrained to associated with one and only one
+** "garden".  Since there is "only_one_garden" in the domain, and the
+** "garden" is related to exactly five flower "beds" there is no
+** need to explicitly constrain the model to only allow only five
+** "beds".
+
+** The acidity of each "bed" is different i.e. unique.
+*)
+ENTITY bed;
+   acidity                     : ph;
+   holds_plants                : SET [1 : ?] OF outdoors_plant;
+   planting_plan  : OPTIONAL ARRAY [1:5] OF ARRAY [1:10] OF OPTIONAL outdoors_plant;
+   flowering_order             : OPTIONAL LIST OF outdoors_plant;
+   plants_ready_for_planting   : OPTIONAL BAG [1:50] OF outdoors_plant;
+INVERSE
+   the_garden                  : garden FOR has_beds;
+UNIQUE
+   every_bed_has_a_different_acidity :
+      acidity;
+END_ENTITY;
+
+(*
+** A "plant" is a flowering plant within either the "greenhouse" or a
+** "bed".  These kinds of "plant" are distinct and are represented by
+the
+** two subtypes of "plant", namely "greenhouse_plant" and
+** "outdoors_plant".
+
+** All "plants" have an associated "flower_colour".  They must have a
+** unique Latin "plant_name".  In addition they may have one or more
+** English "plant_names".  The English "plant_names" are not unique
+** since
+** several different species of "plants" may have the same English
+** "plant_name".
+
+** The description states that none of the "plants" inside the
+** "greenhouse" can survive outside it.  This, together with the fact
+** that Mr Jones is a keen gardener, has been taken to imply that the
+** "plants" he places inside the "greenhouse" can survive there.
+** Similarly, the "outdoors_plants" must be able to survive in the
+** "garden".  Therefore, the "temperature_range" which a "plant" can
+** survive in is relevant to all "plants".
+*)
+ENTITY plant
+   ABSTRACT SUPERTYPE OF 
+      (ONEOF (greenhouse_plant, outdoors_plant, aquatic_plant));
+   colour                      : flower_colour;
+   latin_name                  : plant_name;
+   english_names               : OPTIONAL SET [1 : ?] OF plant_name;
+   survival_temperature_range  : temperature_range;
+UNIQUE
+   the_latin_name_of_a_plant_species_is_unique :
+      latin_name;
+END_ENTITY;
+
+(*
+** A "greenhouse_plant" is a "plant" which can only survive within the
+** "greenhouse".  In order to ensure that the "greenhouse_plant" may
+grow
+** within the "greenhouse" it has an associated "temperature" range.
+
+** A "greenhouse_plant" must be inside the "greenhouse".
+
+** A "greenhouse_plant" must be able to survive in the
+** "temperature_range" of the "greenhouse".
+
+** A "greenhouse_plant" cannot survive in the "temperature_range" of
+** the
+** "garden".  Note that this does not prevent the "temperature_ranges"
+** of
+** the "garden" and "greenhouse" from overlapping.
+*)
+ENTITY greenhouse_plant
+   SUBTYPE OF (plant);
+INVERSE
+   the_greenhouse              : greenhouse FOR holds_plants;
+WHERE
+   r1 :
+      (* A greenhouse plant can survive in the greenhouse temperature
+** *)
+       is_sub_range (the_greenhouse.enforced_temperature_range,
+                  SELF\plant.survival_temperature_range);
+
+   r2 :
+      (* A greenhouse plan cannot survive in the garden temperature *)
+      NOT is_sub_range
+      (the_greenhouse.the_garden.climatic_temperature_range,
+                      SELF\plant.survival_temperature_range);
+END_ENTITY;
+
+(*
+** An "outdoors_plant" is a "plant" which can survive outside of the
+** "greenhouse".  It must be grown in a flower "bed".  In order to
+ensure
+** that the "outdoors_plant" can cope with the acidity of the "bed" it
+** has an associated "ph_range".
+
+** The "ph_range" of the "outdoors_plant" must include the "ph" of the
+** "bed".
+*)
+ENTITY outdoors_plant
+   SUBTYPE OF (plant);
+   survival_ph_range           : ph_range;
+INVERSE
+   the_beds                    : SET [1 : ?] OF bed FOR holds_plants;
+WHERE
+   r1 :
+      (* The ph range of the outdoors plant must include the ph value
+** of the
+      bed *)
+    QUERY (b <* the_beds |
+        value_is_within_range (b.acidity, survival_ph_range))
+        = the_beds;
+
+   r2 :
+      (* An outdoors plant can survive in the garden temperature *)
+      is_sub_range (the_beds
+      [1].the_garden.climatic_temperature_range,
+                  SELF\plant.survival_temperature_range);
+END_ENTITY;
+
+ENTITY aquatic_plant
+   SUBTYPE OF (plant);
+   aquatic_plant_type: aquatic_plant_types;
+   oxygen_volumetric_requirement: positive_integer;
+   aquatic_plant_size: positive_integer;
+END_ENTITY;
+
+
+(*
+** This function checks that a real value lies within the specified
+** "real_value_range".
+*)
+FUNCTION value_is_within_range (v : REAL;
+                                r : real_value_range) : BOOLEAN;
+   RETURN ( (v >= r.minimum_value) AND (v <= r.maximum_value));
+END_FUNCTION;
+
+(*
+** This function checks that one "real_value_range" is completely
+** contained within another.
+*)
+FUNCTION is_sub_range (r1,
+                       r2 : real_value_range) : BOOLEAN;
+   RETURN (value_is_within_range (r1.minimum_value, r2) AND
+          value_is_within_range (r1.maximum_value, r2));
+END_FUNCTION;
+
+END_SCHEMA;
+
+

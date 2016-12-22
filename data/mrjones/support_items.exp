@@ -1,0 +1,123 @@
+
+(* ============================ S C H E M A  ====================== *)
+
+SCHEMA support_items;
+
+(*
+** The appropriate base type to use for "temperature" is not clear
+from
+** the description.  However, given that Mr Jones takes great care of
+** "temperature" values it was decided to model it as a real value.
+*)
+TYPE temperature
+    = REAL;
+END_TYPE;
+
+(*
+** Both "temperatures" and "ph" values for a plant are within a
+** "real_value_range".
+*)
+ENTITY real_value_range
+   ABSTRACT SUPERTYPE OF
+      (ONEOF (temperature_range, ph_range, efficiency_range));
+   minimum_value               : REAL;
+   maximum_value               : REAL;
+WHERE
+   the_values_must_be_sensible :
+      maximum_value >= minimum_value;
+END_ENTITY;
+
+(*
+** A "plant" is able to survive within a "temperature_range".  The
+** "garden" will throughout the year have a "temperature_range" which
+the
+** "outdoors_plants" must be able to survive in.  Similarly, the
+** "greenhouse" has a "temperature_range" which the
+"greenhouse_plants"
+** can survive in.
+*)
+ENTITY temperature_range
+   SUBTYPE OF (real_value_range);
+   SELF\real_value_range.minimum_value : temperature;
+   SELF\real_value_range.maximum_value : temperature;
+END_ENTITY;
+
+(*
+** The description mentions both Latin names and English names for
+** "plants".  These two `types' of "plant_name" were considered to
+have
+** sufficient in common to justify their modelling by a single defined
+** type.
+
+** It is not clear if some constraints should be specified for
+** "plant_name".  For example, it may sensible to ensure that it is
+** not
+** empty and that it is alphabetic.
+*)
+TYPE plant_name
+    = STRING;
+END_TYPE;
+
+(*
+** The acidity of the "beds" and the range acceptable to
+** "outdoors_plants" has been modelled by the defined type "ph".  It
+is
+** not clear which base type should be used for "ph"; however, given
+that
+** Mr Jones takes pride in compatibility of values, it was decided to
+use
+** the real type.
+
+** A "ph" value is constrained to being between zero and fourteen.  In
+** reality, it is highly unlikely that Mr Jones would ever use "ph"
+** values near the extremes.  However, there is no indication of more
+** realistic limits within the domain description.
+*)
+TYPE ph
+   = REAL;
+WHERE
+   the_ph_is_between_0_and_14 :
+     {0 <= SELF <= 14};
+END_TYPE;
+
+(*
+** An "outdoors_plant", indeed any "plant", can survive a range of
+"ph"
+** values.
+*)
+ENTITY ph_range
+   SUBTYPE OF (real_value_range);
+   SELF\real_value_range.minimum_value : ph;
+   SELF\real_value_range.maximum_value : ph;
+END_ENTITY;
+
+TYPE positive_integer = INTEGER;
+WHERE
+   positive_only: SELF > 0;
+END_TYPE;
+
+ENTITY efficiency_range
+   SUBTYPE OF (real_value_range);
+   SELF\real_value_range.minimum_value : efficiency_measure;
+   SELF\real_value_range.maximum_value : efficiency_measure;
+END_ENTITY;
+
+TYPE percentage = REAL;
+WHERE
+   between_0_and_100: {0.0 <= SELF <= 100.0};
+END_TYPE;
+
+TYPE fractional_value = REAL;
+WHERE
+   between_0_and_1: {0.0 <= SELF <= 1.0};
+END_TYPE;
+
+TYPE efficiency_measure = SELECT (percentage, fractional_value);
+END_TYPE;
+
+TYPE efficiency = SELECT (efficiency_measure, efficiency_range);
+END_TYPE;
+
+END_SCHEMA;
+
+

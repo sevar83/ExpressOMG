@@ -1,0 +1,11 @@
+Changes:
+
+0. -> 0.0
+1. -> 1.0
+2. -> 2.0
+
+RULE IfcRepresentationContextSameWCS -> commented
+
+Constraint "ApplicableOccurence" of ENTITY IfcTypeProduct -> commented
+
+Constrain "WR11" of ENTITY IfcArbitraryOpenProfileDef -> commented

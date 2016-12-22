@@ -1,0 +1,11 @@
+schema polygon;ENTITY point;
+  x, y : Real;
+END_ENTITY; 
+
+ENTITY polygon;
+vertices 
+
+
+: LIST [3:?] OF point;
+END_ENTITY; 
+END_SCHEMA;
